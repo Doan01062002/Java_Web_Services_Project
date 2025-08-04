@@ -86,10 +86,10 @@ public class UserServiceImpl implements UserService {
         userRole.setAssignedAt(LocalDateTime.now()); // Gán giá trị cho assigned_at
         userRoleRepository.save(userRole);
 
-        Customer customer = new Customer();
-        customer.setUserId(savedUser.getUserId());
-        customer.setStatus(Customer.CustomerStatus.ACTIVE);
-        customerRepository.save(customer);
+//        Customer customer = new Customer();
+//        customer.setUserId(savedUser.getUserId());
+//        customer.setStatus(Customer.CustomerStatus.ACTIVE);
+//        customerRepository.save(customer);
 
         sendVerificationEmail(savedUser);
 
