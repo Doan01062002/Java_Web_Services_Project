@@ -1,38 +1,27 @@
 package com.example.project_java_web_service_nguyenvandoan.config.principal;
 
-import com.example.project_java_web_service_nguyenvandoan.entity.User;
-import com.example.project_java_web_service_nguyenvandoan.entity.UserStatus;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
-import java.util.stream.Collectors;
 
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
 public class CustomUserDetails implements UserDetails {
-
-    private final String username;
-    private final String password;
-    private final String fullName;
-    private final String email;
-    private final String phone;
-    private final Collection<? extends GrantedAuthority> authorities;
-    private final Boolean enabled;
-
-    public CustomUserDetails(User user) {
-        if (user.getStatus() == null) {
-            throw new IllegalStateException("User status is null for username: " + user.getUsername());
-        }
-        this.username = user.getUsername();
-        this.password = user.getPasswordHash();
-        this.fullName = user.getFullName();
-        this.email = user.getEmail();
-        this.phone = user.getPhoneNumber();
-        this.authorities = user.getRoles().stream()
-                .map(role -> new SimpleGrantedAuthority("ROLE_" + role.getRoleName()))
-                .collect(Collectors.toList());
-        this.enabled = user.getStatus() == UserStatus.ACTIVE;
-    }
+    private String username;
+    private String password;
+    private String fullName;
+    private String address;
+    private String email;
+    private String phone;
+    private Boolean enabled;
+    private Collection<? extends GrantedAuthority> authorities;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -56,7 +45,7 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public boolean isAccountNonLocked() {
-        return enabled && getStatus() != UserStatus.BLOCKED;
+        return true;
     }
 
     @Override
@@ -67,21 +56,5 @@ public class CustomUserDetails implements UserDetails {
     @Override
     public boolean isEnabled() {
         return enabled;
-    }
-
-    public String getFullName() {
-        return fullName;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public String getPhone() {
-        return phone;
-    }
-
-    private UserStatus getStatus() {
-        return enabled ? UserStatus.ACTIVE : UserStatus.INACTIVE;
     }
 }

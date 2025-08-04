@@ -14,7 +14,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Service
 public class UserRoleServiceImpl implements UserRoleService {
@@ -37,26 +36,17 @@ public class UserRoleServiceImpl implements UserRoleService {
     }
 
     @Override
-    public List<UserRole> getUserRolesByUserId(Integer userId) {
-        userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("User not found with id: " + userId));
-        return userRoleRepository.findByUserId(userId);
+    public Role getRoleDetails(Integer roleId) {
+        return roleRepository.findById(roleId)
+                .orElseThrow(() -> new EntityNotFoundException("Role not found"));
     }
 
     @Override
-    public UserRole assignRoleToUser(Integer userId, Integer roleId) {
+    public UserRole assignRole(Integer userId, Integer roleId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("User not found with id: " + userId));
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
         Role role = roleRepository.findById(roleId)
-                .orElseThrow(() -> new EntityNotFoundException("Role not found with id: " + roleId));
-
-        // Kiểm tra xem user đã có role này chưa
-        boolean roleExists = userRoleRepository.findByUserId(userId)
-                .stream()
-                .anyMatch(userRole -> userRole.getRoleId().equals(roleId));
-        if (roleExists) {
-            throw new IllegalStateException("User already has role: " + role.getRoleName());
-        }
+                .orElseThrow(() -> new EntityNotFoundException("Role not found"));
 
         UserRole userRole = new UserRole();
         userRole.setUserId(userId);
@@ -66,16 +56,11 @@ public class UserRoleServiceImpl implements UserRoleService {
     }
 
     @Override
-    public UserRole updateUserRole(Integer userRoleId, Integer newRoleId) {
+    public UserRole updateRoleAssignment(Integer userRoleId, Integer newRoleId) {
         UserRole userRole = userRoleRepository.findById(userRoleId)
-                .orElseThrow(() -> new EntityNotFoundException("UserRole not found with id: " + userRoleId));
-        Role newRole = roleRepository.findById(newRoleId)
-                .orElseThrow(() -> new EntityNotFoundException("Role not found with id: " + newRoleId));
-
-        // Kiểm tra xem role mới có trùng với role hiện tại không
-        if (userRole.getRoleId().equals(newRoleId)) {
-            throw new IllegalStateException("User already has role: " + newRole.getRoleName());
-        }
+                .orElseThrow(() -> new EntityNotFoundException("User role not found"));
+        Role role = roleRepository.findById(newRoleId)
+                .orElseThrow(() -> new EntityNotFoundException("Role not found"));
 
         userRole.setRoleId(newRoleId);
         userRole.setAssignedAt(LocalDateTime.now());
@@ -83,9 +68,9 @@ public class UserRoleServiceImpl implements UserRoleService {
     }
 
     @Override
-    public void revokeRoleFromUser(Integer userRoleId) {
+    public void revokeRole(Integer userRoleId) {
         UserRole userRole = userRoleRepository.findById(userRoleId)
-                .orElseThrow(() -> new EntityNotFoundException("UserRole not found with id: " + userRoleId));
+                .orElseThrow(() -> new EntityNotFoundException("User role not found"));
         userRoleRepository.delete(userRole);
     }
 }

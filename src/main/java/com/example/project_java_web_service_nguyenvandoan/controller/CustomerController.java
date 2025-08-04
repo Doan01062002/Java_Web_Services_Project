@@ -1,11 +1,15 @@
 package com.example.project_java_web_service_nguyenvandoan.controller;
 
-import com.example.project_java_web_service_nguyenvandoan.dto.request.UserRegister;
-import com.example.project_java_web_service_nguyenvandoan.dto.request.UserUpdateRequest;
-import com.example.project_java_web_service_nguyenvandoan.dto.request.UserStatusUpdateRequest;
+import com.example.project_java_web_service_nguyenvandoan.dto.request.CustomerGroupRequest;
+import com.example.project_java_web_service_nguyenvandoan.dto.request.CustomerRequest;
+import com.example.project_java_web_service_nguyenvandoan.dto.request.UserRoleRequest;
 import com.example.project_java_web_service_nguyenvandoan.dto.response.APIResponse;
-import com.example.project_java_web_service_nguyenvandoan.entity.User;
-import com.example.project_java_web_service_nguyenvandoan.service.UserService;
+import com.example.project_java_web_service_nguyenvandoan.entity.Customer;
+import com.example.project_java_web_service_nguyenvandoan.entity.CustomerGroup;
+import com.example.project_java_web_service_nguyenvandoan.entity.Role;
+import com.example.project_java_web_service_nguyenvandoan.entity.UserRole;
+import com.example.project_java_web_service_nguyenvandoan.service.CustomerService;
+import com.example.project_java_web_service_nguyenvandoan.service.UserRoleService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -14,7 +18,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -24,56 +27,135 @@ import java.util.List;
 public class CustomerController {
 
     @Autowired
-    private UserService userService;
+    private CustomerService customerService;
 
-    @GetMapping
+    @Autowired
+    private UserRoleService userRoleService;
+
+    // Get role details
+    @GetMapping("/roles/{roleId}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<APIResponse<User>> getCustomers(
+    public ResponseEntity<APIResponse<Role>> getRoleDetails(@PathVariable Integer roleId) {
+        Role role = userRoleService.getRoleDetails(roleId);
+        APIResponse.DataWrapper<Role> data = new APIResponse.DataWrapper<>(List.of(role), null);
+        return new ResponseEntity<>(new APIResponse<>(true, "Role details retrieved successfully", data, null, null), HttpStatus.OK);
+    }
+
+    // Assign role to user
+    @PostMapping("/roles")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<APIResponse<UserRole>> assignRole(@Valid @RequestBody UserRoleRequest request) {
+        UserRole userRole = userRoleService.assignRole(request.getUserId(), request.getRoleId());
+        APIResponse.DataWrapper<UserRole> data = new APIResponse.DataWrapper<>(List.of(userRole), null);
+        return new ResponseEntity<>(new APIResponse<>(true, "Role assigned successfully", data, null, null), HttpStatus.CREATED);
+    }
+
+    // Update role assignment
+    @PutMapping("/roles/{userRoleId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<APIResponse<UserRole>> updateRoleAssignment(@PathVariable Integer userRoleId, @Valid @RequestBody UserRoleRequest request) {
+        UserRole userRole = userRoleService.updateRoleAssignment(userRoleId, request.getRoleId());
+        APIResponse.DataWrapper<UserRole> data = new APIResponse.DataWrapper<>(List.of(userRole), null);
+        return new ResponseEntity<>(new APIResponse<>(true, "Role assignment updated successfully", data, null, null), HttpStatus.OK);
+    }
+
+    // Revoke role from user
+    @DeleteMapping("/roles/{userRoleId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<APIResponse<String>> revokeRole(@PathVariable Integer userRoleId) {
+        userRoleService.revokeRole(userRoleId);
+        APIResponse.DataWrapper<String> data = new APIResponse.DataWrapper<>(List.of("Role revoked"), null);
+        return new ResponseEntity<>(new APIResponse<>(true, "Role revoked successfully", data, null, null), HttpStatus.OK);
+    }
+
+    // Get customer groups
+    @GetMapping("/groups")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    public ResponseEntity<APIResponse<CustomerGroup>> getCustomerGroups(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        Page<CustomerGroup> groupPage = customerService.getCustomerGroups(PageRequest.of(page, size));
+        APIResponse.Pagination pagination = new APIResponse.Pagination(page, size, groupPage.getTotalPages(), groupPage.getTotalElements());
+        APIResponse.DataWrapper<CustomerGroup> data = new APIResponse.DataWrapper<>(groupPage.getContent(), pagination);
+        return new ResponseEntity<>(new APIResponse<>(true, "Customer groups retrieved successfully", data, null, null), HttpStatus.OK);
+    }
+
+    // Create customer group
+    @PostMapping("/groups")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<APIResponse<CustomerGroup>> createCustomerGroup(@Valid @RequestBody CustomerGroupRequest request) {
+        CustomerGroup group = customerService.createCustomerGroup(request);
+        APIResponse.DataWrapper<CustomerGroup> data = new APIResponse.DataWrapper<>(List.of(group), null);
+        return new ResponseEntity<>(new APIResponse<>(true, "Customer group created successfully", data, null, null), HttpStatus.CREATED);
+    }
+
+    // Update customer group
+    @PutMapping("/groups/{groupId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<APIResponse<CustomerGroup>> updateCustomerGroup(@PathVariable Integer groupId, @Valid @RequestBody CustomerGroupRequest request) {
+        CustomerGroup group = customerService.updateCustomerGroup(groupId, request);
+        APIResponse.DataWrapper<CustomerGroup> data = new APIResponse.DataWrapper<>(List.of(group), null);
+        return new ResponseEntity<>(new APIResponse<>(true, "Customer group updated successfully", data, null, null), HttpStatus.OK);
+    }
+
+    // Delete customer group
+    @DeleteMapping("/groups/{groupId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<APIResponse<String>> deleteCustomerGroup(@PathVariable Integer groupId) {
+        customerService.deleteCustomerGroup(groupId);
+        APIResponse.DataWrapper<String> data = new APIResponse.DataWrapper<>(List.of("Customer group deleted"), null);
+        return new ResponseEntity<>(new APIResponse<>(true, "Customer group deleted successfully", data, null, null), HttpStatus.OK);
+    }
+
+    // Get customers with filter and pagination
+    @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF', 'CUSTOMER')")
+    public ResponseEntity<APIResponse<Customer>> getCustomers(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(required = false) String username,
-            @RequestParam(required = false) String email) {
-        Page<User> customerPage = userService.getCustomers(PageRequest.of(page, size), username, email);
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Integer groupId,
+            Authentication authentication) {
+        String username = authentication.getName();
+        Page<Customer> customerPage = customerService.getCustomers(PageRequest.of(page, size), status, groupId, username);
         APIResponse.Pagination pagination = new APIResponse.Pagination(page, size, customerPage.getTotalPages(), customerPage.getTotalElements());
-        APIResponse.DataWrapper<User> data = new APIResponse.DataWrapper<>(customerPage.getContent(), pagination);
+        APIResponse.DataWrapper<Customer> data = new APIResponse.DataWrapper<>(customerPage.getContent(), pagination);
         return new ResponseEntity<>(new APIResponse<>(true, "Customers retrieved successfully", data, null, null), HttpStatus.OK);
     }
 
-    @GetMapping("/{userId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'CUSTOMER')")
-    public ResponseEntity<APIResponse<User>> getCustomerById(@PathVariable Integer userId) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String currentUsername = authentication.getName();
-        User user = userService.getCustomerById(userId, currentUsername);
-        APIResponse.DataWrapper<User> data = new APIResponse.DataWrapper<>(List.of(user), null);
-        return new ResponseEntity<>(new APIResponse<>(true, "Customer retrieved successfully", data, null, null), HttpStatus.OK);
+    // Get customer details
+    @GetMapping("/{customerId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF', 'CUSTOMER')")
+    public ResponseEntity<APIResponse<Customer>> getCustomerDetails(@PathVariable Integer customerId, Authentication authentication) {
+        Customer customer = customerService.getCustomerDetails(customerId, authentication.getName());
+        APIResponse.DataWrapper<Customer> data = new APIResponse.DataWrapper<>(List.of(customer), null);
+        return new ResponseEntity<>(new APIResponse<>(true, "Customer details retrieved successfully", data, null, null), HttpStatus.OK);
     }
 
+    // Create customer
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<APIResponse<User>> createCustomer(@Valid @RequestBody UserRegister request) {
-        User user = userService.createCustomer(request);
-        APIResponse.DataWrapper<User> data = new APIResponse.DataWrapper<>(List.of(user), null);
+    public ResponseEntity<APIResponse<Customer>> createCustomer(@Valid @RequestBody CustomerRequest request) {
+        Customer customer = customerService.createCustomer(request);
+        APIResponse.DataWrapper<Customer> data = new APIResponse.DataWrapper<>(List.of(customer), null);
         return new ResponseEntity<>(new APIResponse<>(true, "Customer created successfully", data, null, null), HttpStatus.CREATED);
     }
 
-    @PutMapping("/{userId}")
+    // Update customer
+    @PutMapping("/{customerId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'CUSTOMER')")
-    public ResponseEntity<APIResponse<User>> updateCustomer(
-            @PathVariable Integer userId, @Valid @RequestBody UserUpdateRequest request) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String currentUsername = authentication.getName();
-        User user = userService.updateCustomer(userId, request, currentUsername);
-        APIResponse.DataWrapper<User> data = new APIResponse.DataWrapper<>(List.of(user), null);
+    public ResponseEntity<APIResponse<Customer>> updateCustomer(@PathVariable Integer customerId, @Valid @RequestBody CustomerRequest request, Authentication authentication) {
+        Customer customer = customerService.updateCustomer(customerId, request, authentication.getName());
+        APIResponse.DataWrapper<Customer> data = new APIResponse.DataWrapper<>(List.of(customer), null);
         return new ResponseEntity<>(new APIResponse<>(true, "Customer updated successfully", data, null, null), HttpStatus.OK);
     }
 
-    @PutMapping("/{userId}/status")
+    // Update customer status
+    @PutMapping("/{customerId}/status")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<APIResponse<User>> updateCustomerStatus(
-            @PathVariable Integer userId, @Valid @RequestBody UserStatusUpdateRequest request) {
-        User user = userService.updateCustomerStatus(userId, request);
-        APIResponse.DataWrapper<User> data = new APIResponse.DataWrapper<>(List.of(user), null);
+    public ResponseEntity<APIResponse<String>> updateCustomerStatus(@PathVariable Integer customerId, @RequestBody Customer.CustomerStatus status) {
+        customerService.updateCustomerStatus(customerId, status);
+        APIResponse.DataWrapper<String> data = new APIResponse.DataWrapper<>(List.of("Customer status updated"), null);
         return new ResponseEntity<>(new APIResponse<>(true, "Customer status updated successfully", data, null, null), HttpStatus.OK);
     }
 }

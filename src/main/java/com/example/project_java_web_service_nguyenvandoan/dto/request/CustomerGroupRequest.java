@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class CustomerGroupRequest {
     @NotBlank(message = "Group name is required")
-    @Size(min = 3, max = 50, message = "Group name must be between 3 and 50 characters")
+    @Size(max = 100, message = "Group name must not exceed 100 characters")
     private String groupName;
 
     @Size(max = 255, message = "Description must not exceed 255 characters")

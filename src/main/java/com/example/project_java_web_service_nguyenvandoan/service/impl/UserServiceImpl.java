@@ -2,7 +2,9 @@ package com.example.project_java_web_service_nguyenvandoan.service.impl;
 
 import com.example.project_java_web_service_nguyenvandoan.config.jwt.JWTProvider;
 import com.example.project_java_web_service_nguyenvandoan.config.principal.CustomUserDetails;
-import com.example.project_java_web_service_nguyenvandoan.dto.request.*;
+import com.example.project_java_web_service_nguyenvandoan.dto.request.UserLogin;
+import com.example.project_java_web_service_nguyenvandoan.dto.request.UserRegister;
+import com.example.project_java_web_service_nguyenvandoan.dto.request.UserUpdate;
 import com.example.project_java_web_service_nguyenvandoan.dto.response.JWTResponse;
 import com.example.project_java_web_service_nguyenvandoan.entity.*;
 import com.example.project_java_web_service_nguyenvandoan.repository.*;
@@ -16,7 +18,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -58,15 +59,11 @@ public class UserServiceImpl implements UserService {
     @Autowired
     private JavaMailSender mailSender;
 
+    @Autowired
+    private UserRoleRepository userRoleRepository;
+
     @Override
     public User registerUser(UserRegister userRegister) {
-        if (userRepository.existsByUsername(userRegister.getUsername())) {
-            throw new IllegalStateException("Username already exists");
-        }
-        if (userRepository.existsByEmail(userRegister.getEmail())) {
-            throw new IllegalStateException("Email already exists");
-        }
-
         Role customerRole = roleRepository.findByRoleName("CUSTOMER")
                 .orElseThrow(() -> new EntityNotFoundException("Customer role not found"));
 
@@ -76,14 +73,26 @@ public class UserServiceImpl implements UserService {
                 .email(userRegister.getEmail())
                 .fullName(userRegister.getFullName())
                 .phoneNumber(userRegister.getPhoneNumber())
-                .status(UserStatus.ACTIVE)
+                .isActive(true)
                 .emailVerified(false)
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
-                .roles(Collections.singletonList(customerRole))
-                .build();
+                .build(); // Không gán roles trực tiếp ở đây
+
         User savedUser = userRepository.save(user);
-        sendVerificationEmail(savedUser); // Send verification email after registration
+
+        // Tạo bản ghi UserRole
+        UserRole userRole = new UserRole();
+        userRole.setUserId(savedUser.getUserId());
+        userRole.setRoleId(customerRole.getRoleId());
+        userRole.setAssignedAt(LocalDateTime.now()); // Gán giá trị cho assigned_at
+        userRoleRepository.save(userRole);
+
+        Customer customer = new Customer();
+        customer.setUserId(savedUser.getUserId());
+        customer.setStatus(Customer.CustomerStatus.ACTIVE);
+        customerRepository.save(customer);
+
+        sendVerificationEmail(savedUser);
+
         return savedUser;
     }
 
@@ -199,6 +208,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public void updateUserStatus(Integer id, Boolean isActive) {
         User user = getUserById(id);
+        user.setIsActive(isActive);
         user.setUpdatedAt(LocalDateTime.now());
         userRepository.save(user);
     }
@@ -206,74 +216,8 @@ public class UserServiceImpl implements UserService {
     @Override
     public void deleteUser(Integer id) {
         User user = getUserById(id);
+        user.setIsActive(false);
         user.setUpdatedAt(LocalDateTime.now());
         userRepository.save(user);
-    }
-
-    @Override
-    public Page<User> getCustomers(Pageable pageable, String username, String email) {
-        if (username != null && !username.isEmpty() && email != null && !email.isEmpty()) {
-            return userRepository.findByUsernameContainingIgnoreCaseAndEmailContainingIgnoreCaseAndRolesRoleName(
-                    username, email, "CUSTOMER", pageable);
-        } else if (username != null && !username.isEmpty()) {
-            return userRepository.findByUsernameContainingIgnoreCaseAndRolesRoleName(
-                    username, "CUSTOMER", pageable);
-        } else if (email != null && !email.isEmpty()) {
-            return userRepository.findByEmailContainingIgnoreCaseAndRolesRoleName(
-                    email, "CUSTOMER", pageable);
-        }
-        return userRepository.findByRolesRoleName("CUSTOMER", pageable);
-    }
-
-    @Override
-    public User getCustomerById(Integer userId, String currentUsername) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("User not found with id: " + userId));
-        if (!user.getRoles().stream().anyMatch(role -> role.getRoleName().equals("CUSTOMER"))) {
-            throw new IllegalStateException("User is not a customer");
-        }
-        if (!user.getUsername().equals(currentUsername) && !hasAdminRole(currentUsername)) {
-            throw new AccessDeniedException("Access denied: You can only view your own profile");
-        }
-        return user;
-    }
-
-    @Override
-    public User createCustomer(UserRegister request) {
-        return registerUser(request); // Tái sử dụng logic đăng ký
-    }
-
-    @Override
-    public User updateCustomer(Integer userId, UserUpdateRequest request, String currentUsername) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("User not found with id: " + userId));
-        if (!user.getRoles().stream().anyMatch(role -> role.getRoleName().equals("CUSTOMER"))) {
-            throw new IllegalStateException("User is not a customer");
-        }
-        if (!user.getUsername().equals(currentUsername) && !hasAdminRole(currentUsername)) {
-            throw new AccessDeniedException("Access denied: You can only update your own profile");
-        }
-        user.setFullName(request.getFullName());
-        user.setPhoneNumber(request.getPhoneNumber());
-        user.setUpdatedAt(LocalDateTime.now());
-        return userRepository.save(user);
-    }
-
-    @Override
-    public User updateCustomerStatus(Integer userId, UserStatusUpdateRequest request) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("User not found with id: " + userId));
-        if (!user.getRoles().stream().anyMatch(role -> role.getRoleName().equals("CUSTOMER"))) {
-            throw new IllegalStateException("User is not a customer");
-        }
-        user.setStatus(request.getStatus());
-        user.setUpdatedAt(LocalDateTime.now());
-        return userRepository.save(user);
-    }
-
-    private boolean hasAdminRole(String username) {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new EntityNotFoundException("User not found with username: " + username));
-        return user.getRoles().stream().anyMatch(role -> role.getRoleName().equals("ADMIN"));
     }
 }

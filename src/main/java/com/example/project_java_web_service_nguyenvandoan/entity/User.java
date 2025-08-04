@@ -32,8 +32,8 @@ public class User {
     @Column(name = "phone_number", length = 20)
     private String phoneNumber;
 
-//    @Column(name = "is_active", nullable = false)
-//    private Boolean isActive = true;
+    @Column(name = "is_active", nullable = false)
+    private Boolean isActive = true;
 
     @Column(name = "email_verified", nullable = false)
     private Boolean emailVerified = false;
@@ -51,12 +51,4 @@ public class User {
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "role_id"))
     private List<Role> roles;
-
-    @ManyToMany(fetch = FetchType.LAZY, mappedBy = "users")
-    private List<CustomerGroup> customerGroups;
-
-    @Column(name = "status", nullable = false)
-    @Enumerated(EnumType.STRING)
-    private UserStatus status = UserStatus.ACTIVE; // Default to ACTIVE
-
 }

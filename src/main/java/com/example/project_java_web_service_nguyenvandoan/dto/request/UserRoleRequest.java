@@ -1,5 +1,6 @@
 package com.example.project_java_web_service_nguyenvandoan.dto.request;
 
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -7,7 +8,10 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class UserRoleAssignmentRequest {
+public class UserRoleRequest {
+    @NotNull(message = "User ID is required")
     private Integer userId;
+
+    @NotNull(message = "Role ID is required")
     private Integer roleId;
 }

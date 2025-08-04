@@ -22,11 +22,18 @@ public class CustomUserDetailsService implements UserDetailsService {
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username));
-        if (user.getStatus() == null) {
-            throw new IllegalStateException("User status is null for username: " + username);
-        }
-        return new CustomUserDetails(user);
+                .orElseThrow(() -> new UsernameNotFoundException("Không tồn tại username"));
+        return CustomUserDetails.builder()
+                .username(user.getUsername())
+                .password(user.getPasswordHash())
+                .fullName(user.getFullName())
+                .email(user.getEmail())
+                .phone(user.getPhoneNumber())
+                .enabled(user.getIsActive())
+                .authorities(user.getRoles().stream()
+                        .map(role -> new SimpleGrantedAuthority("ROLE_" + role.getRoleName()))
+                        .toList())
+                .build();
     }
 
     private Collection<? extends GrantedAuthority> mapRoleToGrandAuthorities(List<Role> roles) {
