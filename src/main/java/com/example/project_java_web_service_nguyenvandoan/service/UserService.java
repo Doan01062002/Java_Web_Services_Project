@@ -4,9 +4,12 @@ import com.example.project_java_web_service_nguyenvandoan.dto.request.UserLogin;
 import com.example.project_java_web_service_nguyenvandoan.dto.request.UserRegister;
 import com.example.project_java_web_service_nguyenvandoan.dto.request.UserUpdate;
 import com.example.project_java_web_service_nguyenvandoan.dto.response.JWTResponse;
+import com.example.project_java_web_service_nguyenvandoan.entity.Session;
 import com.example.project_java_web_service_nguyenvandoan.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+
+import java.util.List;
 
 public interface UserService {
     User registerUser(UserRegister userRegister);
@@ -21,4 +24,7 @@ public interface UserService {
     void updateUserStatus(Integer id, Boolean isActive);
     void deleteUser(Integer id);
     void sendVerificationEmail(User user);
+    List<Session> getActiveSessions();
+    void deleteSession(String sessionId);
+    int cleanupExpiredSessions();
 }

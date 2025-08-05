@@ -11,10 +11,10 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 public class Session {
     @Id
-    @Column(name = "session_id", length = 255)
+    @Column(name = "session_id")
     private String sessionId;
 
-    @Column(name = "user_id", nullable = false)
+    @Column(name = "user_id")
     private Integer userId;
 
     @Column(name = "login_time", nullable = false)
@@ -23,7 +23,7 @@ public class Session {
     @Column(name = "last_activity_time", nullable = false)
     private LocalDateTime lastActivityTime = LocalDateTime.now();
 
-    @Column(name = "expiry_time", nullable = false)
+    @Column(name = "expiry_time")
     private LocalDateTime expiryTime;
 
     @Column(name = "ip_address", length = 45)

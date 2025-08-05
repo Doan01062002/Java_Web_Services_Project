@@ -2,12 +2,10 @@ package com.example.project_java_web_service_nguyenvandoan.controller;
 
 import com.example.project_java_web_service_nguyenvandoan.dto.request.CustomerGroupRequest;
 import com.example.project_java_web_service_nguyenvandoan.dto.request.CustomerRequest;
+import com.example.project_java_web_service_nguyenvandoan.dto.request.PurchaseRequest;
 import com.example.project_java_web_service_nguyenvandoan.dto.request.UserRoleRequest;
-import com.example.project_java_web_service_nguyenvandoan.dto.response.APIResponse;
-import com.example.project_java_web_service_nguyenvandoan.entity.Customer;
-import com.example.project_java_web_service_nguyenvandoan.entity.CustomerGroup;
-import com.example.project_java_web_service_nguyenvandoan.entity.Role;
-import com.example.project_java_web_service_nguyenvandoan.entity.UserRole;
+import com.example.project_java_web_service_nguyenvandoan.dto.response.*;
+import com.example.project_java_web_service_nguyenvandoan.entity.*;
 import com.example.project_java_web_service_nguyenvandoan.service.CustomerService;
 import com.example.project_java_web_service_nguyenvandoan.service.UserRoleService;
 import jakarta.validation.Valid;
@@ -157,5 +155,93 @@ public class CustomerController {
         customerService.updateCustomerStatus(customerId, status);
         APIResponse.DataWrapper<String> data = new APIResponse.DataWrapper<>(List.of("Customer status updated"), null);
         return new ResponseEntity<>(new APIResponse<>(true, "Customer status updated successfully", data, null, null), HttpStatus.OK);
+    }
+
+    @DeleteMapping("/{customerId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<APIResponse<String>> softDeleteCustomer(@PathVariable Integer customerId) {
+        customerService.softDeleteCustomer(customerId);
+        APIResponse.DataWrapper<String> data = new APIResponse.DataWrapper<>(List.of("Customer soft deleted"), null);
+        return new ResponseEntity<>(new APIResponse<>(true, "Customer soft deleted successfully", data, null, null), HttpStatus.OK);
+    }
+
+    @GetMapping("/{customerId}/purchases")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF', 'CUSTOMER')")
+    public ResponseEntity<APIResponse<Purchase>> getCustomerPurchaseHistory(
+            @PathVariable Integer customerId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            Authentication authentication) {
+        Page<Purchase> purchasePage = customerService.getCustomerPurchaseHistory(customerId, PageRequest.of(page, size), authentication.getName());
+        APIResponse.Pagination pagination = new APIResponse.Pagination(page, size, purchasePage.getTotalPages(), purchasePage.getTotalElements());
+        APIResponse.DataWrapper<Purchase> data = new APIResponse.DataWrapper<>(purchasePage.getContent(), pagination);
+        return new ResponseEntity<>(new APIResponse<>(true, "Purchase history retrieved successfully", data, null, null), HttpStatus.OK);
+    }
+
+    @PostMapping("/purchases")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    public ResponseEntity<APIResponse<Purchase>> createPurchase(@Valid @RequestBody PurchaseRequest request) {
+        Purchase purchase = customerService.createPurchase(request);
+        APIResponse.DataWrapper<Purchase> data = new APIResponse.DataWrapper<>(List.of(purchase), null);
+        return new ResponseEntity<>(new APIResponse<>(true, "Purchase created successfully", data, null, null), HttpStatus.CREATED);
+    }
+
+    @PutMapping("/purchases/{purchaseId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    public ResponseEntity<APIResponse<Purchase>> updatePurchase(@PathVariable Integer purchaseId, @Valid @RequestBody PurchaseRequest request) {
+        Purchase purchase = customerService.updatePurchase(purchaseId, request);
+        APIResponse.DataWrapper<Purchase> data = new APIResponse.DataWrapper<>(List.of(purchase), null);
+        return new ResponseEntity<>(new APIResponse<>(true, "Purchase updated successfully", data, null, null), HttpStatus.OK);
+    }
+
+    @DeleteMapping("/purchases/{purchaseId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<APIResponse<String>> deletePurchase(@PathVariable Integer purchaseId) {
+        customerService.deletePurchase(purchaseId);
+        APIResponse.DataWrapper<String> data = new APIResponse.DataWrapper<>(List.of("Purchase deleted"), null);
+        return new ResponseEntity<>(new APIResponse<>(true, "Purchase deleted successfully", data, null, null), HttpStatus.OK);
+    }
+
+    @GetMapping("/stats/growth")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<APIResponse<CustomerGrowthStats>> getCustomerGrowthStats() {
+        List<CustomerGrowthStats> stats = customerService.getCustomerGrowthStats();
+        APIResponse.DataWrapper<CustomerGrowthStats> data = new APIResponse.DataWrapper<>(stats, null);
+        return new ResponseEntity<>(new APIResponse<>(true, "Customer growth stats retrieved successfully", data, null, null), HttpStatus.OK);
+    }
+
+    @GetMapping("/stats/segments")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<APIResponse<CustomerSegment>> getCustomerSegments() {
+        List<CustomerSegment> segments = customerService.getCustomerSegments();
+        APIResponse.DataWrapper<CustomerSegment> data = new APIResponse.DataWrapper<>(segments, null);
+        return new ResponseEntity<>(new APIResponse<>(true, "Customer segments retrieved successfully", data, null, null), HttpStatus.OK);
+    }
+
+    @GetMapping("/stats/clv")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<APIResponse<CustomerCLV>> getCustomerCLVs() {
+        List<CustomerCLV> clvs = customerService.getCustomerCLVs();
+        APIResponse.DataWrapper<CustomerCLV> data = new APIResponse.DataWrapper<>(clvs, null);
+        return new ResponseEntity<>(new APIResponse<>(true, "Customer CLVs retrieved successfully", data, null, null), HttpStatus.OK);
+    }
+
+    @GetMapping("/stats/revenue")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<APIResponse<RevenueReport>> getRevenueByPeriod() {
+        List<RevenueReport> report = customerService.getRevenueByPeriod();
+        APIResponse.DataWrapper<RevenueReport> data = new APIResponse.DataWrapper<>(report, null);
+        return new ResponseEntity<>(new APIResponse<>(true, "Revenue report retrieved successfully", data, null, null), HttpStatus.OK);
+    }
+
+    @GetMapping("/stats/top-customers")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<APIResponse<TopCustomer>> getTopCustomers(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        Page<TopCustomer> topCustomers = customerService.getTopCustomers(PageRequest.of(page, size));
+        APIResponse.Pagination pagination = new APIResponse.Pagination(page, size, topCustomers.getTotalPages(), topCustomers.getTotalElements());
+        APIResponse.DataWrapper<TopCustomer> data = new APIResponse.DataWrapper<>(topCustomers.getContent(), pagination);
+        return new ResponseEntity<>(new APIResponse<>(true, "Top customers retrieved successfully", data, null, null), HttpStatus.OK);
     }
 }

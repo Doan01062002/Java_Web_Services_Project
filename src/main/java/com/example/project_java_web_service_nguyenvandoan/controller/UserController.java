@@ -3,6 +3,7 @@ package com.example.project_java_web_service_nguyenvandoan.controller;
 import com.example.project_java_web_service_nguyenvandoan.dto.request.UserUpdate;
 import com.example.project_java_web_service_nguyenvandoan.dto.response.APIResponse;
 import com.example.project_java_web_service_nguyenvandoan.dto.response.ErrorDetail;
+import com.example.project_java_web_service_nguyenvandoan.entity.Session;
 import com.example.project_java_web_service_nguyenvandoan.entity.User;
 import com.example.project_java_web_service_nguyenvandoan.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -133,5 +134,29 @@ public class UserController {
         userService.deleteUser(id);
         APIResponse.DataWrapper<String> data = new APIResponse.DataWrapper<>(List.of("User deleted"), null);
         return new ResponseEntity<>(new APIResponse<>(true, "User deleted successfully", data, null, null), HttpStatus.OK);
+    }
+
+    @GetMapping("/sessions")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<APIResponse<Session>> getActiveSessions() {
+        List<Session> sessions = userService.getActiveSessions();
+        APIResponse.DataWrapper<Session> data = new APIResponse.DataWrapper<>(sessions, null);
+        return new ResponseEntity<>(new APIResponse<>(true, "Active sessions retrieved successfully", data, null, null), HttpStatus.OK);
+    }
+
+    @DeleteMapping("/sessions/{sessionId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<APIResponse<String>> deleteSession(@PathVariable String sessionId) {
+        userService.deleteSession(sessionId);
+        APIResponse.DataWrapper<String> data = new APIResponse.DataWrapper<>(List.of("Session deleted"), null);
+        return new ResponseEntity<>(new APIResponse<>(true, "Session deleted successfully", data, null, null), HttpStatus.OK);
+    }
+
+    @PostMapping("/sessions/cleanup")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<APIResponse<String>> cleanupExpiredSessions() {
+        userService.cleanupExpiredSessions();
+        APIResponse.DataWrapper<String> data = new APIResponse.DataWrapper<>(List.of("Expired sessions cleaned up"), null);
+        return new ResponseEntity<>(new APIResponse<>(true, "Expired sessions cleaned up successfully", data, null, null), HttpStatus.OK);
     }
 }

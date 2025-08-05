@@ -43,4 +43,7 @@ public class Customer {
     public enum CustomerStatus {
         ACTIVE, INACTIVE, BLOCKED
     }
+
+    @Column(name = "is_deleted", nullable = false)
+    private Boolean isDeleted = false;
 }
