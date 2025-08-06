@@ -11,9 +11,11 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -45,9 +47,26 @@ public class AuthController {
                     .collect(Collectors.toList());
             return new ResponseEntity<>(new APIResponse<>(false, "Validation failed", null, errors, null), HttpStatus.BAD_REQUEST);
         }
-        JWTResponse jwtResponse = userService.login(userLogin);
-        APIResponse.DataWrapper<JWTResponse> data = new APIResponse.DataWrapper<>(List.of(jwtResponse), null);
-        return new ResponseEntity<>(new APIResponse<>(true, "Login successfully", data, null, null), HttpStatus.OK);
+        try {
+            JWTResponse jwtResponse = userService.login(userLogin);
+            APIResponse.DataWrapper<JWTResponse> data = new APIResponse.DataWrapper<>(List.of(jwtResponse), null);
+            return new ResponseEntity<>(new APIResponse<>(true, "Login successfully", data, null, null), HttpStatus.OK);
+        } catch (BadCredentialsException e) {
+            return new ResponseEntity<>(
+                    new APIResponse<>(false, "Invalid username or password", null,
+                            Collections.singletonList(new ErrorDetail("credentials", "Invalid username or password")), null),
+                    HttpStatus.UNAUTHORIZED);
+        } catch (IllegalStateException e) {
+            return new ResponseEntity<>(
+                    new APIResponse<>(false, e.getMessage(), null,
+                            Collections.singletonList(new ErrorDetail("email", e.getMessage())), null),
+                    HttpStatus.FORBIDDEN);
+        } catch (Exception e) {
+            return new ResponseEntity<>(
+                    new APIResponse<>(false, "Login failed: " + e.getMessage(), null,
+                            Collections.singletonList(new ErrorDetail("general", e.getMessage())), null),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
     @PostMapping("/verify-email/{token}")

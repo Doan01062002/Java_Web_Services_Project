@@ -1,11 +1,13 @@
 package com.example.project_java_web_service_nguyenvandoan.controller;
 
+import com.example.project_java_web_service_nguyenvandoan.dto.request.ChangePasswordRequest;
 import com.example.project_java_web_service_nguyenvandoan.dto.request.UserUpdate;
 import com.example.project_java_web_service_nguyenvandoan.dto.response.APIResponse;
 import com.example.project_java_web_service_nguyenvandoan.dto.response.ErrorDetail;
 import com.example.project_java_web_service_nguyenvandoan.entity.Session;
 import com.example.project_java_web_service_nguyenvandoan.entity.User;
 import com.example.project_java_web_service_nguyenvandoan.service.UserService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -74,16 +76,20 @@ public class UserController {
 
     @PutMapping("/password")
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF', 'CUSTOMER')")
-    public ResponseEntity<APIResponse<String>> changePassword(@RequestBody String newPassword, Authentication authentication) {
+    public ResponseEntity<APIResponse<String>> changePassword(@Valid @RequestBody ChangePasswordRequest changePasswordRequest, Authentication authentication) {
         try {
             if (authentication == null || !authentication.isAuthenticated()) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                         .body(new APIResponse<>(false, "Không được xác thực", null,
                                 Collections.singletonList(new ErrorDetail("Vui lòng cung cấp token hợp lệ")), null));
             }
-            userService.changePassword(authentication.getName(), newPassword);
+            userService.changePassword(authentication.getName(), changePasswordRequest);
             APIResponse.DataWrapper<String> data = new APIResponse.DataWrapper<>(List.of("Password changed"), null);
             return new ResponseEntity<>(new APIResponse<>(true, "Password changed successfully", data, null, null), HttpStatus.OK);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new APIResponse<>(false, e.getMessage(), null,
+                            Collections.singletonList(new ErrorDetail("oldPassword", e.getMessage())), null));
         } catch (AccessDeniedException e) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(new APIResponse<>(false, "Không có quyền truy cập: " + e.getMessage(), null,

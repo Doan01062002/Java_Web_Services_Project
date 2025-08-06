@@ -1,5 +1,6 @@
 package com.example.project_java_web_service_nguyenvandoan.service;
 
+import com.example.project_java_web_service_nguyenvandoan.dto.request.ChangePasswordRequest;
 import com.example.project_java_web_service_nguyenvandoan.dto.request.UserLogin;
 import com.example.project_java_web_service_nguyenvandoan.dto.request.UserRegister;
 import com.example.project_java_web_service_nguyenvandoan.dto.request.UserUpdate;
@@ -17,7 +18,7 @@ public interface UserService {
     boolean verifyEmail(String token);
     User getUserByUsername(String username);
     User updateProfile(String username, UserUpdate userUpdate);
-    void changePassword(String username, String newPassword);
+    void changePassword(String username, ChangePasswordRequest changePasswordRequest);
     Page<User> getAllUsers(Pageable pageable);
     User getUserById(Integer id);
     User updateUser(Integer id, UserUpdate userUpdate);

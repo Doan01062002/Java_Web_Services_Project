@@ -14,7 +14,7 @@ public interface SessionRepository extends JpaRepository<Session, String> {
     @Query("SELECT s FROM Session s WHERE s.expiryTime > :currentTime")
     List<Session> findActiveSessions(LocalDateTime currentTime);
 
-    void deleteBySessionId(String sessionId);
+//    void deleteBySessionId(String sessionId);
 
     @Modifying
     @Query("DELETE FROM Session s WHERE s.expiryTime <= :currentTime")

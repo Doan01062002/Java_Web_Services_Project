@@ -2,6 +2,7 @@ package com.example.project_java_web_service_nguyenvandoan.service.impl;
 
 import com.example.project_java_web_service_nguyenvandoan.config.jwt.JWTProvider;
 import com.example.project_java_web_service_nguyenvandoan.config.principal.CustomUserDetails;
+import com.example.project_java_web_service_nguyenvandoan.dto.request.ChangePasswordRequest;
 import com.example.project_java_web_service_nguyenvandoan.dto.request.UserLogin;
 import com.example.project_java_web_service_nguyenvandoan.dto.request.UserRegister;
 import com.example.project_java_web_service_nguyenvandoan.dto.request.UserUpdate;
@@ -19,6 +20,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -99,8 +101,21 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public JWTResponse login(UserLogin userLogin) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(userLogin.getUsername(), userLogin.getPassword()));
+        Authentication authentication;
+        try {
+            authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(userLogin.getUsername(), userLogin.getPassword()));
+        } catch (BadCredentialsException e) {
+            throw new BadCredentialsException("Invalid username or password");
+        }
+
+        // Kiểm tra email verified
+        User user = userRepository.findByUsername(userLogin.getUsername())
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+        if (!user.getEmailVerified()) {
+            throw new IllegalStateException("Email is not verified. Please verify your email before logging in.");
+        }
+
         CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
         String token = jwtProvider.generateToken(userDetails.getUsername());
 
@@ -178,9 +193,17 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public void changePassword(String username, String newPassword) {
-        User user = getUserByUsername(username);
-        user.setPasswordHash(passwordEncoder.encode(newPassword));
+    public void changePassword(String username, ChangePasswordRequest changePasswordRequest) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+
+        // Kiểm tra mật khẩu cũ
+        if (!passwordEncoder.matches(changePasswordRequest.getOldPassword(), user.getPasswordHash())) {
+            throw new IllegalArgumentException("Old password is incorrect");
+        }
+
+        // Cập nhật mật khẩu mới
+        user.setPasswordHash(passwordEncoder.encode(changePasswordRequest.getNewPassword()));
         user.setUpdatedAt(LocalDateTime.now());
         userRepository.save(user);
     }
@@ -229,7 +252,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void deleteSession(String sessionId) {
-        sessionRepository.deleteBySessionId(sessionId);
+        sessionRepository.deleteById(sessionId);
     }
 
     @Transactional
