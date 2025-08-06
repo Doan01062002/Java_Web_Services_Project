@@ -67,6 +67,16 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public User registerUser(UserRegister userRegister) {
+        // Kiểm tra trùng username
+        if (userRepository.findByUsername(userRegister.getUsername()).isPresent()) {
+            throw new IllegalStateException("Username already exists");
+        }
+
+        // Kiểm tra trùng email
+        if (userRepository.findByEmail(userRegister.getEmail()).isPresent()) {
+            throw new IllegalStateException("Email already exists");
+        }
+
         Role customerRole = roleRepository.findByRoleName("CUSTOMER")
                 .orElseThrow(() -> new EntityNotFoundException("Customer role not found"));
 
@@ -89,10 +99,6 @@ public class UserServiceImpl implements UserService {
         userRole.setAssignedAt(LocalDateTime.now()); // Gán giá trị cho assigned_at
         userRoleRepository.save(userRole);
 
-//        Customer customer = new Customer();
-//        customer.setUserId(savedUser.getUserId());
-//        customer.setStatus(Customer.CustomerStatus.ACTIVE);
-//        customerRepository.save(customer);
 
         sendVerificationEmail(savedUser);
 

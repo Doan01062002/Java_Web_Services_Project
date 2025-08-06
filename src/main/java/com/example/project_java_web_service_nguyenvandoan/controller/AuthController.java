@@ -34,9 +34,17 @@ public class AuthController {
                     .collect(Collectors.toList());
             return new ResponseEntity<>(new APIResponse<>(false, "Validation failed", null, errors, null), HttpStatus.BAD_REQUEST);
         }
-        User user = userService.registerUser(userRegister);
-        APIResponse.DataWrapper<User> data = new APIResponse.DataWrapper<>(List.of(user), null);
-        return new ResponseEntity<>(new APIResponse<>(true, "Register user successfully", data, null, null), HttpStatus.CREATED);
+
+        try {
+            User user = userService.registerUser(userRegister);
+            APIResponse.DataWrapper<User> data = new APIResponse.DataWrapper<>(List.of(user), null);
+            return new ResponseEntity<>(new APIResponse<>(true, "Register user successfully", data, null, null), HttpStatus.CREATED);
+        } catch (IllegalStateException e) {
+            return new ResponseEntity<>(
+                    new APIResponse<>(false, e.getMessage(), null,
+                            Collections.singletonList(new ErrorDetail("credentials", e.getMessage())), null),
+                    HttpStatus.BAD_REQUEST);
+        }
     }
 
     @PostMapping("/login")
